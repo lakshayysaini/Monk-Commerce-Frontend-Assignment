@@ -10,13 +10,9 @@ function App() {
     setPickerOpen(true);
   };
 
-  const handleClosePicker = () => {
-    setPickerOpen(false);
-  };
-
   return (
     <>
-      <ProductPicker open={pickerOpen} onClose={handleClosePicker} />
+      <ProductPicker open={pickerOpen} onOpenChange={setPickerOpen} />
       <div className="max-w-4xl mx-auto p-6">
         <h1 className="text-2xl font-semibold mb-6">Add Products</h1>
         <div className="space-y-4">

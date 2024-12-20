@@ -4,16 +4,19 @@ import { Search, X } from "lucide-react";
 
 interface ProductPIckerProps {
   open: boolean;
-  onClose: any;
+  onOpenChange: (open: boolean) => void;
 }
 
-const ProductPicker: React.FC<ProductPIckerProps> = ({ open, onClose }) => {
+const ProductPicker: React.FC<ProductPIckerProps> = ({
+  open,
+  onOpenChange,
+}) => {
   const [selectedProducts, setSelectedProducts] = useState<Set<number>>(
     new Set()
   );
 
   return (
-    <Dialog.Root open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50" />
         <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-white rounded-lg shadow-xl">
@@ -88,7 +91,10 @@ const ProductPicker: React.FC<ProductPIckerProps> = ({ open, onClose }) => {
                 {selectedProducts.size !== 1 ? "s" : ""} selected
               </span>
               <div className="space-x-2">
-                <button className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
+                <button
+                  onClick={() => onOpenChange(false)}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+                >
                   Cancel
                 </button>
                 <button className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600">

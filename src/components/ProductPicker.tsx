@@ -1,16 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Product, ProductWithDiscount } from "../types/interfaces";
+import FetchProducts from "../api/FetchProducts";
 
 interface ProductPickerProps {
   onProductsSelected: (products: ProductWithDiscount[]) => void;
   onClose: () => void;
+  apiKey: string;
 }
 
 export function ProductPicker({
   onProductsSelected,
   onClose,
+  apiKey,
 }: ProductPickerProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [selectedProducts, setSelectedProducts] = useState<Set<number>>(
     new Set()
@@ -19,18 +25,31 @@ export function ProductPicker({
     new Set()
   );
 
-  const filteredProducts = SAMPLE_PRODUCTS.filter((product) =>
-    product.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const fetchedProducts = await FetchProducts(searchTerm, 1, 10, apiKey);
+        setProducts(fetchedProducts);
+      } catch (err) {
+        setError("Failed to load products. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(loadProducts, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm, apiKey]);
 
   const handleProductSelect = (productId: number) => {
     const newSelectedProducts = new Set(selectedProducts);
     if (selectedProducts.has(productId)) {
       newSelectedProducts.delete(productId);
       const variantsToRemove =
-        SAMPLE_PRODUCTS.find((p) => p.id === productId)?.variants.map(
-          (v) => v.id
-        ) || [];
+        products.find((p) => p.id === productId)?.variants.map((v) => v.id) ||
+        [];
       const newSelectedVariants = new Set(selectedVariants);
       variantsToRemove.forEach((id) => newSelectedVariants.delete(id));
       setSelectedVariants(newSelectedVariants);
@@ -45,7 +64,7 @@ export function ProductPicker({
     if (selectedVariants.has(variantId)) {
       newSelectedVariants.delete(variantId);
       const productVariants =
-        SAMPLE_PRODUCTS.find((p) => p.id === productId)?.variants || [];
+        products.find((p) => p.id === productId)?.variants || [];
       const hasSelectedVariants = productVariants.some((v) =>
         newSelectedVariants.has(v.id)
       );
@@ -62,19 +81,20 @@ export function ProductPicker({
   };
 
   const handleAdd = () => {
-    const selectedProductsData = SAMPLE_PRODUCTS.filter((product) =>
-      selectedProducts.has(product.id)
-    ).map((product) => ({
-      ...product,
-      variants: product.variants.filter((variant) =>
-        selectedVariants.has(variant.id)
-      ),
-    }));
+    const selectedProductsData = products
+      .filter((product) => selectedProducts.has(product.id))
+      .map((product) => ({
+        ...product,
+        variants: product.variants.filter((variant) =>
+          selectedVariants.has(variant.id)
+        ),
+      }));
+
+console.log('selectedProductsData' , selectedProductsData);
+
 
     onProductsSelected(selectedProductsData);
   };
-
-  if (!SAMPLE_PRODUCTS) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
@@ -102,53 +122,64 @@ export function ProductPicker({
           </div>
 
           <div className="max-h-[400px] overflow-y-auto space-y-4">
-            {filteredProducts.map((product) => (
-              <div key={product.id} className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedProducts.has(product.id)}
-                    onChange={() => handleProductSelect(product.id)}
-                    className="w-4 h-4"
-                  />
+            {isLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              </div>
+            ) : error ? (
+              <div className="text-red-500 text-center py-4">{error}</div>
+            ) : (
+              products.map((product) => (
+                <div key={product.id} className="space-y-2">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={product.image.src}
-                      alt={product.title}
-                      className="h-12 w-12 object-cover rounded"
+                    <input
+                      type="checkbox"
+                      checked={selectedProducts.has(product.id)}
+                      onChange={() => handleProductSelect(product.id)}
+                      className="w-4 h-4"
                     />
-                    <div>
-                      <div className="font-medium">{product.title}</div>
-                      <div className="text-sm text-gray-500">
-                        {product.variants.length} variants
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={product.image.src}
+                        alt={product.title}
+                        className="h-12 w-12 object-cover rounded"
+                      />
+                      <div>
+                        <div className="font-medium">{product.title}</div>
+                        <div className="text-sm text-gray-500">
+                          {product.variants.length} variants
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-                {selectedProducts.has(product.id) && (
-                  <div className="ml-8 space-y-2">
-                    {product.variants.map((variant) => (
-                      <div key={variant.id} className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedVariants.has(variant.id)}
-                          onChange={() =>
-                            handleVariantSelect(variant.id, product.id)
-                          }
-                          className="w-4 h-4"
-                        />
-                        <div>
-                          <div className="font-medium">{variant.title}</div>
-                          <div className="text-sm text-gray-500">
-                            ${variant.price} available
+                  {selectedProducts.has(product.id) && (
+                    <div className="ml-8 space-y-2">
+                      {product.variants.map((variant) => (
+                        <div
+                          key={variant.id}
+                          className="flex items-center gap-3"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedVariants.has(variant.id)}
+                            onChange={() =>
+                              handleVariantSelect(variant.id, product.id)
+                            }
+                            className="w-4 h-4"
+                          />
+                          <div>
+                            <div className="font-medium">{variant.title}</div>
+                            <div className="text-sm text-gray-500">
+                              ${variant.price} available
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
@@ -161,6 +192,7 @@ export function ProductPicker({
             <button
               onClick={handleAdd}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              disabled={isLoading}
             >
               Add
             </button>
@@ -171,51 +203,4 @@ export function ProductPicker({
   );
 }
 
-const SAMPLE_PRODUCTS: Product[] = [
-  {
-    id: 77,
-    title: "Fog Linen Chambray Towel - Beige Stripe",
-    variants: [
-      {
-        id: 1,
-        product_id: 77,
-        title: "XS / Silver",
-        price: "49",
-      },
-      {
-        id: 2,
-        product_id: 77,
-        title: "S / Silver",
-        price: "49",
-      },
-      {
-        id: 3,
-        product_id: 77,
-        title: "M / Silver",
-        price: "49",
-      },
-    ],
-    image: {
-      id: 266,
-      product_id: 77,
-      src: "https://cdn11.bigcommerce.com/s-p1xcugzp89/products/77/images/266/foglinenbeigestripetowel1b.1647248662.386.513.jpg?c=1",
-    },
-  },
-  {
-    id: 80,
-    title: "Orbit Terrarium - Large",
-    variants: [
-      {
-        id: 64,
-        product_id: 80,
-        title: "Default Title",
-        price: "109",
-      },
-    ],
-    image: {
-      id: 272,
-      product_id: 80,
-      src: "https://cdn11.bigcommerce.com/s-p1xcugzp89/products/80/images/272/roundterrariumlarge.1647248662.386.513.jpg?c=1",
-    },
-  },
-];
+export default ProductPicker;

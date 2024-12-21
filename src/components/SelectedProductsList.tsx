@@ -104,6 +104,9 @@ export function SelectedProductList({
     setEditingProductIndex(null);
   };
 
+console.log("products", products);
+
+
   return (
     <div className="space-y-4">
       {products.map((product, index) => (
@@ -214,6 +217,7 @@ export function SelectedProductList({
             handleProductsSelected(products, editingProductIndex)
           }
           onClose={() => setEditingProductIndex(null)}
+          apiKey="72njgfa948d9aS7gs5"
         />
       )}
     </div>

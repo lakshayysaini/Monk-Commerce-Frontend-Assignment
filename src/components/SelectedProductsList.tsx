@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ProductWithDiscount } from "../types/interfaces";
 import { ProductPicker } from "./ProductPicker";
 import { DraggableItem } from "./DraggableItem";
+import { PencilIcon, X } from "lucide-react";
 interface ProductListProps {
   products: ProductWithDiscount[];
   onProductsChange: (products: ProductWithDiscount[]) => void;
@@ -132,7 +133,7 @@ export function SelectedProductList({
                 onClick={() => setEditingProductIndex(index)}
                 className="p-2 text-gray-500 hover:text-gray-700"
               >
-                ✎
+                <PencilIcon color="#000000" size={15} />
               </button>
               <div className="flex items-center gap-2">
                 {discountedProducts[index] ? (
@@ -169,7 +170,7 @@ export function SelectedProductList({
                     onClick={() => handleRemoveProduct(index)}
                     className="p-2 text-gray-500 hover:text-gray-700"
                   >
-                    ×
+                    <X color="#000000" size={15} />
                   </button>
                 )}
               </div>

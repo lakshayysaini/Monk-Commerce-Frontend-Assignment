@@ -22,8 +22,6 @@ function App() {
     setProducts([...products, EMPTY_PRODUCT]);
   };
 
-  console.log("products", products);
-
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-xl mx-auto space-y-6">
@@ -48,6 +46,9 @@ function App() {
           </button>
         </div>
       </div>
+      <p className="absolute bottom-2 right-2 text-[12px]">
+        Made with ❤️ by Lakshayyy
+      </p>
     </div>
   );
 }

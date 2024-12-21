@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ProductWithDiscount } from "../types/interfaces";
 import { ProductPicker } from "./ProductPicker";
 import { DraggableItem } from "./DraggableItem";
-
+import { API_KEY } from "../constants/constants";
 interface ProductListProps {
   products: ProductWithDiscount[];
   onProductsChange: (products: ProductWithDiscount[]) => void;
@@ -256,7 +256,7 @@ export function SelectedProductList({
             handleProductsSelected(products, editingProductIndex)
           }
           onClose={() => setEditingProductIndex(null)}
-          apiKey="72njgfa948d9aS7gs5"
+          apiKey={API_KEY}
         />
       )}
     </div>

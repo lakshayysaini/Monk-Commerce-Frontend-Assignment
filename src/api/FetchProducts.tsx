@@ -1,7 +1,6 @@
 import axios from "axios";
 import { Product } from "../types/interfaces";
-
-const API_URL = "https://stageapi.monkcommerce.app/task/products/search";
+import { API_BASE_URL } from "../constants/constants";
 
 const FetchProducts = async (
   search: string,
@@ -13,7 +12,7 @@ const FetchProducts = async (
   hasMore: boolean;
 }> => {
   try {
-    const response = await axios.get(API_URL, {
+    const response = await axios.get(API_BASE_URL, {
       params: { search, page, limit },
       headers: { "x-api-key": apiKey },
     });

@@ -21,6 +21,13 @@ export function SelectedProductList({
     variantIndex: number;
   } | null>(null);
 
+  const [discountedProducts, setDiscountedProducts] = useState<
+    Record<number, boolean>
+  >({});
+  const [discountedVariants, setDiscountedVariants] = useState<
+    Record<string, boolean>
+  >({});
+
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedItemIndex(index);
     e.dataTransfer.effectAllowed = "move";
@@ -104,7 +111,6 @@ export function SelectedProductList({
     setEditingProductIndex(null);
   };
 
-
   return (
     <div className="space-y-4">
       {products.map((product, index) => (
@@ -123,25 +129,42 @@ export function SelectedProductList({
               <div className="flex-1">
                 <div className="font-medium">{product.title}</div>
               </div>
+              <button
+                onClick={() => setEditingProductIndex(index)}
+                className="p-2 text-gray-500 hover:text-gray-700"
+              >
+                ✎
+              </button>
               <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  defaultValue={product.discount?.value || ""}
-                  className="w-20 px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <select
-                  defaultValue={product.discount?.type || "percentage"}
-                  className="w-24 px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="percentage">% Off</option>
-                  <option value="flat">Flat</option>
-                </select>
-                <button
-                  onClick={() => setEditingProductIndex(index)}
-                  className="p-2 text-gray-500 hover:text-gray-700"
-                >
-                  ✎
-                </button>
+                {discountedProducts[index] ? (
+                  <>
+                    <input
+                      type="number"
+                      defaultValue={product.discount?.value || ""}
+                      className="w-20 px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <select
+                      defaultValue={product.discount?.type || "percentage"}
+                      className="w-24 px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="percentage">% Off</option>
+                      <option value="flat">Flat</option>
+                    </select>
+                  </>
+                ) : (
+                  <button
+                    onClick={() =>
+                      setDiscountedProducts({
+                        ...discountedProducts,
+                        [index]: true,
+                      })
+                    }
+                    className="px-3 py-1 bg-[#008060] text-white rounded-md"
+                  >
+                    Add Discount
+                  </button>
+                )}
+
                 {products.length > 1 && (
                   <button
                     onClick={() => handleRemoveProduct(index)}
@@ -189,18 +212,36 @@ export function SelectedProductList({
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        defaultValue={variant.discount?.value || ""}
-                        className="w-20 px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <select
-                        defaultValue={variant.discount?.type || "percentage"}
-                        className="w-24 px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="percentage">% Off</option>
-                        <option value="flat">Flat</option>
-                      </select>
+                      {discountedVariants[`${index}-${variantIndex}`] ? (
+                        <>
+                          <input
+                            type="number"
+                            defaultValue={variant.discount?.value || ""}
+                            className="w-20 px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <select
+                            defaultValue={
+                              variant.discount?.type || "percentage"
+                            }
+                            className="w-24 px-3 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="percentage">% Off</option>
+                            <option value="flat">Flat</option>
+                          </select>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() =>
+                            setDiscountedVariants({
+                              ...discountedVariants,
+                              [`${index}-${variantIndex}`]: true,
+                            })
+                          }
+                          className="px-3 py-1 bg-[#008060] text-white rounded-md"
+                        >
+                          Add Discount
+                        </button>
+                      )}
                     </div>
                   </div>
                 </DraggableItem>
@@ -215,6 +256,7 @@ export function SelectedProductList({
             handleProductsSelected(products, editingProductIndex)
           }
           onClose={() => setEditingProductIndex(null)}
+          apiKey="72njgfa948d9aS7gs5"
         />
       )}
     </div>

@@ -1,22 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Product, ProductWithDiscount } from "../types/interfaces";
 import FetchProducts from "../api/FetchProducts";
 
 interface ProductPickerProps {
   onProductsSelected: (products: ProductWithDiscount[]) => void;
   onClose: () => void;
-  apiKey: string;
 }
 
-export function ProductPicker({
-  onProductsSelected,
-  onClose,
-  apiKey,
-}: ProductPickerProps) {
+export function ProductPicker({ onProductsSelected, onClose }: ProductPickerProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const [selectedProducts, setSelectedProducts] = useState<Set<number>>(
     new Set()
@@ -25,23 +23,82 @@ export function ProductPicker({
     new Set()
   );
 
-  useEffect(() => {
-    const loadProducts = async () => {
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadingRef = useRef<HTMLDivElement>(null);
+
+  const debounceTimerRef = useRef<any>();
+
+  const loadProducts = useCallback(
+    async (currentPage: number, isNewSearch: boolean = false) => {
+      const loadingState = isNewSearch ? setIsLoading : setIsLoadingMore;
       try {
-        setIsLoading(true);
+        loadingState(true);
         setError(null);
-        const fetchedProducts = await FetchProducts(searchTerm, 1, 10, apiKey);
-        setProducts(fetchedProducts);
+
+        const result = await FetchProducts(searchTerm, currentPage, 10);
+
+        setProducts((prev) =>
+          isNewSearch ? result.products : [...prev, ...result.products]
+        );
+        setHasMore(result.hasMore);
       } catch (err) {
         setError("Failed to load products. Please try again.");
       } finally {
-        setIsLoading(false);
+        loadingState(false);
+      }
+    },
+    [searchTerm]
+  );
+
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    setPage(1);
+    debounceTimerRef.current = setTimeout(() => {
+      loadProducts(1, true);
+    }, 300);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
       }
     };
+  }, [searchTerm, loadProducts]);
 
-    const debounceTimer = setTimeout(loadProducts, 300);
-    return () => clearTimeout(debounceTimer);
-  }, [searchTerm, apiKey]);
+  useEffect(() => {
+    const options = {
+      root: null,
+      rootMargin: "20px",
+      threshold: 0.1,
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      const target = entries[0];
+      if (target.isIntersecting && hasMore && !isLoading && !isLoadingMore) {
+        setPage((prev) => prev + 1);
+      }
+    }, options);
+
+    if (loadingRef.current) {
+      observer.observe(loadingRef.current);
+    }
+
+    observerRef.current = observer;
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [hasMore, isLoading, isLoadingMore]);
+
+  useEffect(() => {
+    if (page > 1) {
+      loadProducts(page);
+    }
+  }, [page, loadProducts]);
 
   const handleProductSelect = (productId: number) => {
     const newSelectedProducts = new Set(selectedProducts);
@@ -90,8 +147,6 @@ export function ProductPicker({
         ),
       }));
 
-    console.log("selectedProductsData", selectedProductsData);
-
     onProductsSelected(selectedProductsData);
   };
 
@@ -120,7 +175,7 @@ export function ProductPicker({
             <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
           </div>
 
-          <div className="max-h-[400px] overflow-y-auto space-y-4">
+          <div className="max-h-[400px] overflow-y-auto space-y-4 scroll-smooth">
             {isLoading ? (
               <div className="flex justify-center py-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -128,56 +183,66 @@ export function ProductPicker({
             ) : error ? (
               <div className="text-red-500 text-center py-4">{error}</div>
             ) : (
-              products.map((product) => (
-                <div key={product.id} className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedProducts.has(product.id)}
-                      onChange={() => handleProductSelect(product.id)}
-                      className="w-4 h-4"
-                    />
+              <>
+                {products.map((product) => (
+                  <div key={product.id} className="space-y-2">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={product.image.src}
-                        alt={product.title}
-                        className="h-12 w-12 object-cover rounded"
+                      <input
+                        type="checkbox"
+                        checked={selectedProducts.has(product.id)}
+                        onChange={() => handleProductSelect(product.id)}
+                        className="w-4 h-4"
                       />
-                      <div>
-                        <div className="font-medium">{product.title}</div>
-                        <div className="text-sm text-gray-500">
-                          {product.variants.length} variants
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={product.image.src}
+                          alt={product.title}
+                          className="h-12 w-12 object-cover rounded"
+                        />
+                        <div>
+                          <div className="font-medium">{product.title}</div>
+                          <div className="text-sm text-gray-500">
+                            {product.variants.length} variants
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  {selectedProducts.has(product.id) && (
-                    <div className="ml-8 space-y-2">
-                      {product.variants.map((variant) => (
-                        <div
-                          key={variant.id}
-                          className="flex items-center gap-3"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedVariants.has(variant.id)}
-                            onChange={() =>
-                              handleVariantSelect(variant.id, product.id)
-                            }
-                            className="w-4 h-4"
-                          />
-                          <div>
-                            <div className="font-medium">{variant.title}</div>
-                            <div className="text-sm text-gray-500">
-                              ${variant.price} available
+                    {selectedProducts.has(product.id) && (
+                      <div className="ml-8 space-y-2">
+                        {product.variants.map((variant) => (
+                          <div
+                            key={variant.id}
+                            className="flex items-center gap-3"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedVariants.has(variant.id)}
+                              onChange={() =>
+                                handleVariantSelect(variant.id, product.id)
+                              }
+                              className="w-4 h-4"
+                            />
+                            <div>
+                              <div className="font-medium">{variant.title}</div>
+                              <div className="text-sm text-gray-500">
+                                ${variant.price} available
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <div ref={loadingRef} className="py-4">
+                  {isLoadingMore && (
+                    <div className="flex justify-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
                     </div>
                   )}
                 </div>
-              ))
+              </>
             )}
           </div>
 
@@ -201,5 +266,3 @@ export function ProductPicker({
     </div>
   );
 }
-
-export default ProductPicker;

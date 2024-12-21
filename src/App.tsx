@@ -26,7 +26,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-xl mx-auto space-y-6">
         <h1 className="text-2xl font-bold">Add Products</h1>
         <div className="bg-white p-6 rounded-lg shadow-sm space-y-6">
           <div className="flex justify-between items-center">
@@ -41,7 +41,7 @@ function App() {
           />
           <button
             onClick={handleAddProduct}
-            className="w-full py-2 border rounded-md hover:bg-gray-50 flex items-center justify-center gap-2"
+            className="w-full py-2 border rounded-md bg-[#008060] flex items-center justify-center gap-2 text-white"
           >
             <span>+</span>
             Add Product

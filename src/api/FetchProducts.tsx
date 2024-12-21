@@ -1,7 +1,7 @@
 import axios from "axios";
 import { Product } from "../types/interfaces";
 
-const API_URL = "https://stageapi.monkcommerce.app/task/products/search";
+// const API_URL = "https://stageapi.monkcommerce.app/task/products/search";
 
 const FetchProducts = async (
   search: string,

@@ -90,8 +90,7 @@ export function ProductPicker({
         ),
       }));
 
-console.log('selectedProductsData' , selectedProductsData);
-
+    console.log("selectedProductsData", selectedProductsData);
 
     onProductsSelected(selectedProductsData);
   };

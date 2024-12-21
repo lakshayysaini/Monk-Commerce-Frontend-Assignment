@@ -104,8 +104,6 @@ export function SelectedProductList({
     setEditingProductIndex(null);
   };
 
-console.log("products", products);
-
 
   return (
     <div className="space-y-4">
@@ -217,7 +215,6 @@ console.log("products", products);
             handleProductsSelected(products, editingProductIndex)
           }
           onClose={() => setEditingProductIndex(null)}
-          apiKey="72njgfa948d9aS7gs5"
         />
       )}
     </div>

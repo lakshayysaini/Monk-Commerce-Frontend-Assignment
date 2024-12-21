@@ -5,14 +5,9 @@ import FetchProducts from "../api/FetchProducts";
 interface ProductPickerProps {
   onProductsSelected: (products: ProductWithDiscount[]) => void;
   onClose: () => void;
-  apiKey: string;
 }
 
-export function ProductPicker({
-  onProductsSelected,
-  onClose,
-  apiKey,
-}: ProductPickerProps) {
+export function ProductPicker({ onProductsSelected, onClose }: ProductPickerProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +35,7 @@ export function ProductPicker({
         loadingState(true);
         setError(null);
 
-        const result = await FetchProducts(searchTerm, currentPage, 10, apiKey);
+        const result = await FetchProducts(searchTerm, currentPage, 10);
 
         setProducts((prev) =>
           isNewSearch ? result.products : [...prev, ...result.products]
@@ -52,7 +47,7 @@ export function ProductPicker({
         loadingState(false);
       }
     },
-    [searchTerm, apiKey]
+    [searchTerm]
   );
 
   useEffect(() => {

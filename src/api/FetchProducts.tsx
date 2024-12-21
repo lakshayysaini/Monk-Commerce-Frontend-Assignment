@@ -1,12 +1,11 @@
 import axios from "axios";
 import { Product } from "../types/interfaces";
-import { API_BASE_URL } from "../constants/constants";
+import { API_BASE_URL, API_KEY } from "../constants/constants";
 
 const FetchProducts = async (
   search: string,
   page: number,
-  limit: number,
-  apiKey: string
+  limit: number
 ): Promise<{
   products: Product[];
   hasMore: boolean;
@@ -14,7 +13,7 @@ const FetchProducts = async (
   try {
     const response = await axios.get(API_BASE_URL, {
       params: { search, page, limit },
-      headers: { "x-api-key": apiKey },
+      headers: { "x-api-key": API_KEY },
     });
 
     const products = response.data;

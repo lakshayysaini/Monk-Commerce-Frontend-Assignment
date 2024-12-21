@@ -104,6 +104,7 @@ export function SelectedProductList({
     setEditingProductIndex(null);
   };
 
+
   return (
     <div className="space-y-4">
       {products.map((product, index) => (

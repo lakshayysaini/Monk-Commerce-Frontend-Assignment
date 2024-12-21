@@ -1,50 +1,17 @@
-# React + TypeScript + Vite
+# Monk Commerce Frontend Assignment
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This app is basically a UI to add products and their specific variants in a list. When you click on edit icon then a dialog box wil open in which there is an API call to fetch the products and variants.
 
-Currently, two official plugins are available:
+There is also scroll pagination like only ten results would fetch at first and then if you scroll more and more then more and more results would get fetched.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Then after we'll just rendering all the selected products and their respective variants.
+  
+https://monk-commerce-frontend-assignment.netlify.app/
 
-## Expanding the ESLint configuration
+## Implementation
+1) There are only 3 components used in this - DraggableItem.tsx , ProductPicker.tsx and SelectedProduct.tsx.
+2) The simplest is the draggable component in the DraggableItem.tsx which is basically a reusable component we are using to drag the products as well as variants.
+3) Other is the ProductPicker component which is a dialog box in which we are fetching the products through API and we using IntersectionObserver browser API to take care of the observer ref and when we scroll to the bottom of the box then again API call takes place as we have it in the useEffect and dependecies are adjusted accordingly.
+4) The selected products from the ProductPicker component gets populated in the 3rd component which renders them in the main UI.
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
-
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
-
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
-
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
-```
+Thank you for this Assignment :)

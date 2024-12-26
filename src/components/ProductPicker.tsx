@@ -1,20 +1,102 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { Product, ProductWithDiscount } from "../types/interfaces";
 import FetchProducts from "../api/FetchProducts";
+import InfiniteScroll from "react-infinite-scroll-component";
+import { X } from "lucide-react";
 
 interface ProductPickerProps {
   onProductsSelected: (products: ProductWithDiscount[]) => void;
   onClose: () => void;
 }
 
-export function ProductPicker({ onProductsSelected, onClose }: ProductPickerProps) {
+const ProductVariant = memo(
+  ({
+    variant,
+    isSelected,
+    onSelect,
+  }: {
+    variant: any;
+    isSelected: boolean;
+    onSelect: () => void;
+  }) => (
+    <div className="flex items-center gap-3">
+      <input
+        type="checkbox"
+        checked={isSelected}
+        onChange={onSelect}
+        className="w-4 h-4"
+      />
+      <div>
+        <div className="font-medium">{variant.title}</div>
+        <div className="text-sm text-gray-500">${variant.price} available</div>
+      </div>
+    </div>
+  )
+);
+
+const ProductItem = memo(
+  ({
+    product,
+    isSelected,
+    selectedVariants,
+    onProductSelect,
+    onVariantSelect,
+  }: {
+    product: Product;
+    isSelected: boolean;
+    selectedVariants: Set<number>;
+    onProductSelect: (id: number) => void;
+    onVariantSelect: (variantId: number, productId: number) => void;
+  }) => (
+    <div className="space-y-2">
+      <div className="flex items-center gap-3">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => onProductSelect(product.id)}
+          className="w-4 h-4"
+        />
+        <div className="flex items-center gap-3">
+          <img
+            src={product.image.src}
+            alt={product.title}
+            className="h-12 w-12 object-cover rounded"
+            loading="lazy"
+          />
+          <div>
+            <div className="font-medium">{product.title}</div>
+            <div className="text-sm text-gray-500">
+              {product.variants.length} variants
+            </div>
+          </div>
+        </div>
+      </div>
+      {isSelected && (
+        <div className="ml-8 space-y-2">
+          {product.variants.map((variant) => (
+            <ProductVariant
+              key={variant.id}
+              variant={variant}
+              isSelected={selectedVariants.has(variant.id)}
+              onSelect={() => onVariantSelect(variant.id, product.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+);
+
+export function ProductPicker({
+  onProductsSelected,
+  onClose,
+}: ProductPickerProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const [selectedProducts, setSelectedProducts] = useState<Set<number>>(
     new Set()
@@ -23,16 +105,16 @@ export function ProductPicker({ onProductsSelected, onClose }: ProductPickerProp
     new Set()
   );
 
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const loadingRef = useRef<HTMLDivElement>(null);
-
   const debounceTimerRef = useRef<any>();
+  const loadingRef = useRef(false);
 
   const loadProducts = useCallback(
     async (currentPage: number, isNewSearch: boolean = false) => {
-      const loadingState = isNewSearch ? setIsLoading : setIsLoadingMore;
+      if (loadingRef.current) return;
+
       try {
-        loadingState(true);
+        loadingRef.current = true;
+        setIsLoading(true);
         setError(null);
 
         const result = await FetchProducts(searchTerm, currentPage, 10);
@@ -44,7 +126,8 @@ export function ProductPicker({ onProductsSelected, onClose }: ProductPickerProp
       } catch (err) {
         setError("Failed to load products. Please try again.");
       } finally {
-        loadingState(false);
+        setIsLoading(false);
+        loadingRef.current = false;
       }
     },
     [searchTerm]
@@ -67,77 +150,68 @@ export function ProductPicker({ onProductsSelected, onClose }: ProductPickerProp
     };
   }, [searchTerm, loadProducts]);
 
-  useEffect(() => {
-    const options = {
-      root: null,
-      rootMargin: "20px",
-      threshold: 0.1,
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      const target = entries[0];
-      if (target.isIntersecting && hasMore && !isLoading && !isLoadingMore) {
-        setPage((prev) => prev + 1);
-      }
-    }, options);
-
-    if (loadingRef.current) {
-      observer.observe(loadingRef.current);
+  const fetchMoreData = useCallback(() => {
+    if (!isLoading && !loadingRef.current) {
+      setPage((prev) => prev + 1);
+      loadProducts(page + 1);
     }
+  }, [isLoading, page, loadProducts]);
 
-    observerRef.current = observer;
+  const handleProductSelect = useCallback(
+    (productId: number) => {
+      setSelectedProducts((prev) => {
+        const newSelectedProducts = new Set(prev);
+        if (prev.has(productId)) {
+          newSelectedProducts.delete(productId);
+          setSelectedVariants((prevVariants) => {
+            const newSelectedVariants = new Set(prevVariants);
+            const variantsToRemove =
+              products
+                .find((p) => p.id === productId)
+                ?.variants.map((v) => v.id) || [];
+            variantsToRemove.forEach((id) => newSelectedVariants.delete(id));
+            return newSelectedVariants;
+          });
+        } else {
+          newSelectedProducts.add(productId);
+        }
+        return newSelectedProducts;
+      });
+    },
+    [products]
+  );
 
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
-  }, [hasMore, isLoading, isLoadingMore]);
+  const handleVariantSelect = useCallback(
+    (variantId: number, productId: number) => {
+      setSelectedVariants((prev) => {
+        const newSelectedVariants = new Set(prev);
+        if (prev.has(variantId)) {
+          newSelectedVariants.delete(variantId);
+          const productVariants =
+            products.find((p) => p.id === productId)?.variants || [];
+          const hasSelectedVariants = productVariants.some((v) =>
+            newSelectedVariants.has(v.id)
+          );
+          if (!hasSelectedVariants) {
+            setSelectedProducts((prevProducts) => {
+              const newSelectedProducts = new Set(prevProducts);
+              newSelectedProducts.delete(productId);
+              return newSelectedProducts;
+            });
+          }
+        } else {
+          newSelectedVariants.add(variantId);
+          setSelectedProducts((prevProducts) =>
+            new Set(prevProducts).add(productId)
+          );
+        }
+        return newSelectedVariants;
+      });
+    },
+    [products]
+  );
 
-  useEffect(() => {
-    if (page > 1) {
-      loadProducts(page);
-    }
-  }, [page, loadProducts]);
-
-  const handleProductSelect = (productId: number) => {
-    const newSelectedProducts = new Set(selectedProducts);
-    if (selectedProducts.has(productId)) {
-      newSelectedProducts.delete(productId);
-      const variantsToRemove =
-        products.find((p) => p.id === productId)?.variants.map((v) => v.id) ||
-        [];
-      const newSelectedVariants = new Set(selectedVariants);
-      variantsToRemove.forEach((id) => newSelectedVariants.delete(id));
-      setSelectedVariants(newSelectedVariants);
-    } else {
-      newSelectedProducts.add(productId);
-    }
-    setSelectedProducts(newSelectedProducts);
-  };
-
-  const handleVariantSelect = (variantId: number, productId: number) => {
-    const newSelectedVariants = new Set(selectedVariants);
-    if (selectedVariants.has(variantId)) {
-      newSelectedVariants.delete(variantId);
-      const productVariants =
-        products.find((p) => p.id === productId)?.variants || [];
-      const hasSelectedVariants = productVariants.some((v) =>
-        newSelectedVariants.has(v.id)
-      );
-      if (!hasSelectedVariants) {
-        const newSelectedProducts = new Set(selectedProducts);
-        newSelectedProducts.delete(productId);
-        setSelectedProducts(newSelectedProducts);
-      }
-    } else {
-      newSelectedVariants.add(variantId);
-      setSelectedProducts(new Set(selectedProducts).add(productId));
-    }
-    setSelectedVariants(newSelectedVariants);
-  };
-
-  const handleAdd = () => {
+  const handleAdd = useCallback(() => {
     const selectedProductsData = products
       .filter((product) => selectedProducts.has(product.id))
       .map((product) => ({
@@ -148,7 +222,7 @@ export function ProductPicker({ onProductsSelected, onClose }: ProductPickerProp
       }));
 
     onProductsSelected(selectedProductsData);
-  };
+  }, [products, selectedProducts, selectedVariants, onProductsSelected]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
@@ -160,7 +234,7 @@ export function ProductPicker({ onProductsSelected, onClose }: ProductPickerProp
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700"
             >
-              ×
+                    <X color="#000000" size={15} />
             </button>
           </div>
 
@@ -175,75 +249,47 @@ export function ProductPicker({ onProductsSelected, onClose }: ProductPickerProp
             <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
           </div>
 
-          <div className="max-h-[400px] overflow-y-auto space-y-4 scroll-smooth">
-            {isLoading ? (
-              <div className="flex justify-center py-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-              </div>
-            ) : error ? (
-              <div className="text-red-500 text-center py-4">{error}</div>
-            ) : (
-              <>
-                {products.map((product) => (
-                  <div key={product.id} className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedProducts.has(product.id)}
-                        onChange={() => handleProductSelect(product.id)}
-                        className="w-4 h-4"
-                      />
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={product.image.src}
-                          alt={product.title}
-                          className="h-12 w-12 object-cover rounded"
-                        />
-                        <div>
-                          <div className="font-medium">{product.title}</div>
-                          <div className="text-sm text-gray-500">
-                            {product.variants.length} variants
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    {selectedProducts.has(product.id) && (
-                      <div className="ml-8 space-y-2">
-                        {product.variants.map((variant) => (
-                          <div
-                            key={variant.id}
-                            className="flex items-center gap-3"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedVariants.has(variant.id)}
-                              onChange={() =>
-                                handleVariantSelect(variant.id, product.id)
-                              }
-                              className="w-4 h-4"
-                            />
-                            <div>
-                              <div className="font-medium">{variant.title}</div>
-                              <div className="text-sm text-gray-500">
-                                ${variant.price} available
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                <div ref={loadingRef} className="py-4">
-                  {isLoadingMore && (
-                    <div className="flex justify-center">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-                    </div>
-                  )}
+          <div
+            id="scrollableDiv"
+            className="max-h-[400px] overflow-y-auto"
+            style={{
+              willChange: "transform",
+              transform: "translateZ(0)",
+            }}
+          >
+            <InfiniteScroll
+              dataLength={products.length}
+              next={fetchMoreData}
+              hasMore={hasMore}
+              loader={
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
                 </div>
-              </>
-            )}
+              }
+              scrollableTarget="scrollableDiv"
+              endMessage={
+                <div className="text-center py-4 text-gray-500">
+                  No more products to load
+                </div>
+              }
+            >
+              <div className="space-y-4">
+                {error ? (
+                  <div className="text-red-500 text-center py-4">{error}</div>
+                ) : (
+                  products.map((product) => (
+                    <ProductItem
+                      key={product.id}
+                      product={product}
+                      isSelected={selectedProducts.has(product.id)}
+                      selectedVariants={selectedVariants}
+                      onProductSelect={handleProductSelect}
+                      onVariantSelect={handleVariantSelect}
+                    />
+                  ))
+                )}
+              </div>
+            </InfiniteScroll>
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">

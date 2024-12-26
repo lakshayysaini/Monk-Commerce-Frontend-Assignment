@@ -257,7 +257,7 @@ export function SelectedProductList({
                       )}
                     </div>
                     <button
-                      onClick={() => handleRemoveVariant(variantIndex)}
+                      onClick={() => handleRemoveVariant(index, variantIndex)}
                       className="p-2 text-gray-500 hover:text-gray-700"
                     >
                       <X color="#000000" size={15} />

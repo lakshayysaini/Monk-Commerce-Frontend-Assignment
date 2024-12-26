@@ -92,6 +92,19 @@ export function SelectedProductList({
     onProductsChange(newProducts);
   };
 
+  const handleRemoveVariant = (productIndex: number, variantIndex: number) => {
+    const newProducts = [...products];
+    const targetProduct = newProducts[productIndex];
+
+    if (targetProduct.variants.length > 1) {
+      targetProduct.variants.splice(variantIndex, 1);
+    } else {
+      newProducts.splice(productIndex, 1);
+    }
+
+    onProductsChange(newProducts);
+  };
+
   const toggleVariants = (index: number) => {
     const newProducts = [...products];
     newProducts[index] = {
@@ -243,6 +256,12 @@ export function SelectedProductList({
                         </button>
                       )}
                     </div>
+                    <button
+                      onClick={() => handleRemoveVariant(variantIndex)}
+                      className="p-2 text-gray-500 hover:text-gray-700"
+                    >
+                      <X color="#000000" size={15} />
+                    </button>
                   </div>
                 </DraggableItem>
               ))}
